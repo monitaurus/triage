@@ -27,10 +27,13 @@ def get_valid_input(prompt, allow_empty=False):
             return cleaned_input
         typer.echo("Invalid input. Please try again.")
 
-def process_files(inbox_path):
+def process_files(inbox_path, process_valid_files):
     for filename in os.listdir(inbox_path):
         file_path = os.path.join(inbox_path, filename)
-        if os.path.isfile(file_path):
+        if os.path.isfile(file_path) and (
+            validate_file_name(filename) == False
+            or (process_valid_files == True and validate_file_name(filename))
+        ):
             typer.echo(f"\nProcessing file: {filename}")
             
             # Get metadata from user
@@ -82,8 +85,10 @@ def main(inbox_path: str = typer.Argument(..., help="Path to the inbox folder"))
     
     list_files(inbox_path)
 
+    process_valid_files = typer.confirm("Do you want to process valid files?")
+
     typer.echo(f"Processing files in: {inbox_path}")
-    process_files(inbox_path)
+    process_files(inbox_path, process_valid_files)
     typer.echo("\nFile processing complete.")
 
 if __name__ == "__main__":
