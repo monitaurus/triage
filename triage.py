@@ -7,6 +7,11 @@ from rich.table import Table
 
 console = Console()
 
+file_name_pattern = r'^([a-z0-9_]+)-([a-z0-9_]+)-([a-z0-9_]+)-(\d{4}_\d{2}_\d{2})(\.[a-zA-Z0-9]+)?$'
+
+def validate_file_name(file_name):
+    return re.match(file_name_pattern, file_name) is not None
+
 def clean_string(s):
     s = s.lower()
     s = re.sub(r'[^a-z0-9\s]', ' ', s)
@@ -57,11 +62,14 @@ def process_files(inbox_path):
 def list_files(inbox_path):
     table = Table(title="Files in Inbox")
     table.add_column("Filename", style="cyan")
+    table.add_column("Valid", style="green")
     
     for filename in os.listdir(inbox_path):
         file_path = os.path.join(inbox_path, filename)
         if os.path.isfile(file_path):
-            table.add_row(filename)
+            is_valid = validate_file_name(filename)
+            validity_emoji = "✅" if is_valid else "❌"
+            table.add_row(filename, validity_emoji)
     
     console.print(table)
 
