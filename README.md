@@ -18,3 +18,9 @@ Where:
 ```
 python triage.py [FOLDER]
 ```
+
+## Ideas
+
+* Use OCR to extract text from images and suggest metadata
+* Move the documents to the corresponding archives folders
+
