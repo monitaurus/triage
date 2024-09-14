@@ -2,6 +2,10 @@ import os
 from datetime import date
 import re
 import typer
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
 
 def clean_string(s):
     s = s.lower()
@@ -50,13 +54,26 @@ def process_files(inbox_path):
             os.rename(file_path, new_path)
             typer.echo(f"File renamed to: {new_name}")
 
-def main(inbox_path: str = typer.Argument(..., help="Path to the inbox folder")):
+def list_files(inbox_path):
+    table = Table(title="Files in Inbox")
+    table.add_column("Filename", style="cyan")
+    
+    for filename in os.listdir(inbox_path):
+        file_path = os.path.join(inbox_path, filename)
+        if os.path.isfile(file_path):
+            table.add_row(filename)
+    
+    console.print(table)
+
+def main(inbox_path: str = typer.Argument(..., help="Path to the inbox folder")):    
     inbox_path = os.path.abspath(inbox_path)
     
     if not os.path.exists(inbox_path):
         typer.echo(f"Error: The specified inbox folder does not exist: {inbox_path}")
         raise typer.Exit(code=1)
     
+    list_files(inbox_path)
+
     typer.echo(f"Processing files in: {inbox_path}")
     process_files(inbox_path)
     typer.echo("\nFile processing complete.")
