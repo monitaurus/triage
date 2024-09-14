@@ -43,12 +43,21 @@ def process_files(inbox_path, process_valid_files):
             console.print(f"[italic]issuer: [magenta]{issuer}[/magenta][/italic]")
             recipient = get_valid_input("Enter recipient")
             console.print(f"[italic]recipient: [magenta]{recipient}[/magenta][/italic]")
-            date_input = get_valid_input("Enter date (leave empty for today's date)", allow_empty=True)
-            console.print(f"[italic]date: [magenta]{date_input}[/magenta][/italic]")
+            today = date.today()
             
-            # Generate today's date if input is empty
-            if not date_input:
-                date_input = date.today().strftime("%Y_%m_%d")
+            def get_date_input(prompt, default):
+                while True:
+                    user_input = typer.prompt(f"{prompt} (default: {default})", default=str(default))
+                    if user_input.isdigit():
+                        return int(user_input)
+                    typer.echo("Invalid input. Please enter a number.")
+            
+            year = get_date_input("Enter year", today.year)
+            month = get_date_input("Enter month", today.month)
+            day = get_date_input("Enter day", today.day)
+            
+            date_input = f"{year:04d}_{month:02d}_{day:02d}"
+            console.print(f"[italic]date: [magenta]{date_input}[/magenta][/italic]")
             
             # Concatenate metadata
             new_name = f"{title}-{issuer}-{recipient}-{date_input}"
