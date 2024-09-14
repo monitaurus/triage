@@ -34,17 +34,17 @@ def process_files(inbox_path, process_valid_files):
             validate_file_name(filename) == False
             or (process_valid_files == True and validate_file_name(filename))
         ):
-            typer.echo(f"\nProcessing file: {filename}")
+            console.print(f"[bold red]Processing file:[/bold red] [magenta][u]{filename}[/u][/magenta]")
             
             # Get metadata from user
             title = get_valid_input("Enter title")
-            typer.echo(f"- title: {title}")
+            console.print(f"[italic]title: [magenta]{title}[/magenta][/italic]")
             issuer = get_valid_input("Enter issuer")
-            typer.echo(f"- issuer: {issuer}")
+            console.print(f"[italic]issuer: [magenta]{issuer}[/magenta][/italic]")
             recipient = get_valid_input("Enter recipient")
-            typer.echo(f"- recipient: {recipient}")
+            console.print(f"[italic]recipient: [magenta]{recipient}[/magenta][/italic]")
             date_input = get_valid_input("Enter date (leave empty for today's date)", allow_empty=True)
-            typer.echo(f"- date: {date_input}")
+            console.print(f"[italic]date: [magenta]{date_input}[/magenta][/italic]")
             
             # Generate today's date if input is empty
             if not date_input:
@@ -60,7 +60,7 @@ def process_files(inbox_path, process_valid_files):
             # Rename the file
             new_path = os.path.join(inbox_path, new_name)
             os.rename(file_path, new_path)
-            typer.echo(f"File renamed to: {new_name}")
+            console.print(f"[bold green]File renamed to:[/bold green] [magenta][u]{new_name}[/u][/magenta]\n")
 
 def list_files(inbox_path):
     table = Table(title="Files in Inbox")
@@ -87,9 +87,7 @@ def main(inbox_path: str = typer.Argument(..., help="Path to the inbox folder"))
 
     process_valid_files = typer.confirm("Do you want to process valid files?")
 
-    typer.echo(f"Processing files in: {inbox_path}")
     process_files(inbox_path, process_valid_files)
-    typer.echo("\nFile processing complete.")
 
 if __name__ == "__main__":
     typer.run(main)
