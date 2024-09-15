@@ -6,6 +6,8 @@ from typing import List, Tuple
 import typer
 from rich.console import Console
 from rich.table import Table
+from prompt_toolkit import prompt
+from prompt_toolkit.completion import FuzzyWordCompleter
 
 console = Console()
 
@@ -20,13 +22,14 @@ def clean_string(s: str) -> str:
     s = re.sub(r'\s+', ' ', s.strip())
     return s.replace(' ', '_')
 
-def get_valid_input(prompt: str, allow_empty: bool = False) -> str:
+def get_valid_input_with_suggestions(prompt_text: str, options: List[str] = None, allow_empty: bool = False) -> str:
+    completer = FuzzyWordCompleter(options) if options else None
     while True:
-        user_input = typer.prompt(prompt).strip()
+        user_input = prompt(prompt_text + ": ", completer=completer).strip()
         cleaned_input = clean_string(user_input)
         if cleaned_input or allow_empty:
             return cleaned_input
-        typer.echo("Invalid input. Please try again.")
+        console.print("Invalid input. Please try again.", style="bold red")
 
 def get_date_input(prompt: str, default: int) -> int:
     while True:
@@ -38,6 +41,8 @@ def get_date_input(prompt: str, default: int) -> int:
 class FileProcessor:
     def __init__(self, inbox_path: str):
         self.inbox_path = inbox_path
+        self.issuer_options = []
+        self.recipient_options = []
 
     def process_files(self, process_valid_files: bool):
         for filename in os.listdir(self.inbox_path):
@@ -59,9 +64,15 @@ class FileProcessor:
         console.print(f"[bold green]File renamed to:[/bold green] [magenta][u]{new_name}[/u][/magenta]\n")
 
     def _get_file_metadata(self) -> Tuple[str, str, str, str]:
-        title = get_valid_input("Enter title")
-        issuer = get_valid_input("Enter issuer")
-        recipient = get_valid_input("Enter recipient")
+        title = get_valid_input_with_suggestions("Enter title")
+
+        issuer = get_valid_input_with_suggestions("Enter issuer", self.issuer_options)
+        if issuer not in self.issuer_options:
+            self.issuer_options.append(issuer)
+
+        recipient = get_valid_input_with_suggestions("Enter recipient", self.recipient_options)
+        if recipient not in self.recipient_options:
+            self.recipient_options.append(recipient)
         
         today = date.today()
         year = get_date_input("Enter year", today.year)
