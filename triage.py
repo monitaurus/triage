@@ -2,7 +2,7 @@ import os
 import json
 from datetime import date
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import typer
 from rich.console import Console
@@ -23,7 +23,7 @@ def clean_string(s: str) -> str:
     s = re.sub(r'\s+', ' ', s.strip())
     return s.replace(' ', '_')
 
-def get_valid_input_with_suggestions(prompt_text: str, options: List[str] = None, allow_empty: bool = False) -> str:
+def get_user_input(prompt_text: str, options: List[str] = None, allow_empty: bool = False) -> str:
     completer = FuzzyWordCompleter(options) if options else None
     while True:
         user_input = prompt(prompt_text + ": ", completer=completer).strip()
@@ -44,67 +44,56 @@ class FileProcessor:
         self.inbox_path = inbox_path
         self.index_file = ".triage-index.json"
         self.index_path = os.path.join(inbox_path, self.index_file)
-        self.load_options()
+        self.options = self.load_options()
 
-    def load_options(self):
+    def load_options(self) -> Dict[str, List[str]]:
         if os.path.exists(self.index_path):
             with open(self.index_path, 'r') as f:
-                options = json.load(f)
-            self.issuer_options = options.get('issuers', [])
-            self.recipient_options = options.get('recipients', [])
-        else:
-            self.title_options = []
-            self.issuer_options = []
-            self.recipient_options = []
+                return json.load(f)
+        return {'issuers': [], 'recipients': []}
 
     def save_options(self):
-        options = {
-            'issuers': self.issuer_options,
-            'recipients': self.recipient_options
-        }
         with open(self.index_path, 'w') as f:
-            json.dump(options, f, indent=2)
+            json.dump(self.options, f, indent=2)
 
     def process_files(self, process_valid_files: bool):
         for filename in os.listdir(self.inbox_path):
-            if filename == self.index_file:
-                continue
-            file_path = os.path.join(self.inbox_path, filename)
-            if os.path.isfile(file_path) and (
-                not validate_file_name(filename)
-                or process_valid_files
-            ):
-                self._process_single_file(filename, file_path)
+            if filename != self.index_file and os.path.isfile(os.path.join(self.inbox_path, filename)):
+                if not validate_file_name(filename) or process_valid_files:
+                    self._process_single_file(filename)
 
-    def _process_single_file(self, filename: str, file_path: str):
+    def _process_single_file(self, filename: str):
         console.print(f"[bold red]Processing file:[/bold red] [magenta][u]{filename}[/u][/magenta]")
         
         metadata = self._get_file_metadata()
         new_name = self._generate_new_filename(filename, metadata)
         
+        old_path = os.path.join(self.inbox_path, filename)
         new_path = os.path.join(self.inbox_path, new_name)
-        os.rename(file_path, new_path)
+        os.rename(old_path, new_path)
         console.print(f"[bold green]File renamed to:[/bold green] [magenta][u]{new_name}[/u][/magenta]\n")
 
     def _get_file_metadata(self) -> Tuple[str, str, str, str]:
-        title = get_valid_input_with_suggestions("Enter title")
-
-        issuer = get_valid_input_with_suggestions("Enter issuer", self.issuer_options)
-        if issuer not in self.issuer_options:
-            self.issuer_options.append(issuer)
-
-        recipient = get_valid_input_with_suggestions("Enter recipient", self.recipient_options)
-        if recipient not in self.recipient_options:
-            self.recipient_options.append(recipient)
+        title = get_user_input("Enter title")
+        issuer = self._get_and_update_option("issuer")
+        recipient = self._get_and_update_option("recipient")
+        date_input = self._get_date_input()
         
+        self.save_options()
+        return title, issuer, recipient, date_input
+
+    def _get_and_update_option(self, option_type: str) -> str:
+        value = get_user_input(f"Enter {option_type}", self.options[f"{option_type}s"])
+        if value not in self.options[f"{option_type}s"]:
+            self.options[f"{option_type}s"].append(value)
+        return value
+
+    def _get_date_input(self) -> str:
         today = date.today()
         year = get_date_input("Enter year", today.year)
         month = get_date_input("Enter month", today.month)
         day = get_date_input("Enter day", today.day)
-        date_input = f"{year:04d}_{month:02d}_{day:02d}"
-        
-        self.save_options()
-        return title, issuer, recipient, date_input
+        return f"{year:04d}_{month:02d}_{day:02d}"
 
     def _generate_new_filename(self, original_filename: str, metadata: Tuple[str, str, str, str]) -> str:
         title, issuer, recipient, date_input = metadata
@@ -117,10 +106,7 @@ class FileProcessor:
         table.add_column("Valid", style="green")
         
         for filename in os.listdir(self.inbox_path):
-            if filename == self.index_file:
-                continue
-            file_path = os.path.join(self.inbox_path, filename)
-            if os.path.isfile(file_path):
+            if filename != self.index_file and os.path.isfile(os.path.join(self.inbox_path, filename)):
                 is_valid = validate_file_name(filename)
                 validity_emoji = "✅" if is_valid else "❌"
                 table.add_row(filename, validity_emoji)
