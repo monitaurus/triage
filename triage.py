@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import date
 import re
 from typing import List, Tuple
@@ -41,11 +42,33 @@ def get_date_input(prompt: str, default: int) -> int:
 class FileProcessor:
     def __init__(self, inbox_path: str):
         self.inbox_path = inbox_path
-        self.issuer_options = []
-        self.recipient_options = []
+        self.index_file = ".triage-index.json"
+        self.index_path = os.path.join(inbox_path, self.index_file)
+        self.load_options()
+
+    def load_options(self):
+        if os.path.exists(self.index_path):
+            with open(self.index_path, 'r') as f:
+                options = json.load(f)
+            self.issuer_options = options.get('issuers', [])
+            self.recipient_options = options.get('recipients', [])
+        else:
+            self.title_options = []
+            self.issuer_options = []
+            self.recipient_options = []
+
+    def save_options(self):
+        options = {
+            'issuers': self.issuer_options,
+            'recipients': self.recipient_options
+        }
+        with open(self.index_path, 'w') as f:
+            json.dump(options, f, indent=2)
 
     def process_files(self, process_valid_files: bool):
         for filename in os.listdir(self.inbox_path):
+            if filename == self.index_file:
+                continue
             file_path = os.path.join(self.inbox_path, filename)
             if os.path.isfile(file_path) and (
                 not validate_file_name(filename)
@@ -80,6 +103,7 @@ class FileProcessor:
         day = get_date_input("Enter day", today.day)
         date_input = f"{year:04d}_{month:02d}_{day:02d}"
         
+        self.save_options()
         return title, issuer, recipient, date_input
 
     def _generate_new_filename(self, original_filename: str, metadata: Tuple[str, str, str, str]) -> str:
@@ -93,6 +117,8 @@ class FileProcessor:
         table.add_column("Valid", style="green")
         
         for filename in os.listdir(self.inbox_path):
+            if filename == self.index_file:
+                continue
             file_path = os.path.join(self.inbox_path, filename)
             if os.path.isfile(file_path):
                 is_valid = validate_file_name(filename)
