@@ -127,7 +127,43 @@ class FileProcessor:
         
         console.print(table)
 
-def main(inbox_path: str = typer.Argument(..., help="Path to the inbox folder")):    
+    @staticmethod
+    def build_index_from_folder(folder_path: str):
+        issuers = set()
+        recipients = set()
+
+        for filename in os.listdir(folder_path):
+            if validate_file_name(filename):
+                parts = filename.split('-')
+                if len(parts) >= 3:
+                    issuers.add(parts[1])
+                    recipients.add(parts[2])
+
+        index = {
+            'issuers': sorted(list(issuers)),
+            'recipients': sorted(list(recipients))
+        }
+
+        index_path = os.path.join(folder_path, ".triage-index.json")
+        with open(index_path, 'w') as f:
+            json.dump(index, f, indent=2)
+
+        console.print(f"[bold green]Index file created at:[/bold green] [magenta]{index_path}[/magenta]")
+        console.print(f"[bold blue]Issuers found:[/bold blue] {len(issuers)}")
+        console.print(f"[bold blue]Recipients found:[/bold blue] {len(recipients)}")
+
+def main(
+    inbox_path: str = typer.Argument(..., help="Path to the inbox folder"),
+    build_index_from: str = typer.Option(None, help="Build index from the specified folder")
+):
+    if build_index_from:
+        build_index_from = os.path.abspath(build_index_from)
+        if not os.path.exists(build_index_from):
+            typer.echo(f"Error: The specified folder does not exist: {build_index_from}")
+            raise typer.Exit(code=1)
+        FileProcessor.build_index_from_folder(build_index_from)
+        return
+
     inbox_path = os.path.abspath(inbox_path)
     
     if not os.path.exists(inbox_path):
@@ -139,6 +175,9 @@ def main(inbox_path: str = typer.Argument(..., help="Path to the inbox folder"))
 
     process_valid_files = typer.confirm("Do you want to process valid files?")
     file_processor.process_files(process_valid_files)
+
+    # Save options at the end of processing
+    file_processor.save_options()
 
 if __name__ == "__main__":
     typer.run(main)
