@@ -56,13 +56,13 @@ class FileProcessor:
         with open(self.index_path, 'w') as f:
             json.dump(self.options, f, indent=2)
 
-    def process_files(self, process_valid_files: bool):
+    def process_files(self, process_valid_files: bool, archive_to: str = None):
         for filename in os.listdir(self.inbox_path):
             if filename != self.index_file and os.path.isfile(os.path.join(self.inbox_path, filename)):
                 if not validate_file_name(filename) or process_valid_files:
-                    self._process_single_file(filename)
+                    self._process_single_file(filename, archive_to)
 
-    def _process_single_file(self, filename: str):
+    def _process_single_file(self, filename: str, archive_to: str = None):
         console.print(f"[bold red]Processing file:[/bold red] [magenta][u]{filename}[/u][/magenta]")
         
         metadata = self._get_file_metadata()
@@ -131,7 +131,7 @@ class FileProcessor:
             'recipients': sorted(list(recipients))
         }
 
-        index_path = os.path.join(inbox_path, ".triage-index.json")  # Save in inbox folder
+        index_path = os.path.join(inbox_path, ".triage-index.json")
         with open(index_path, 'w') as f:
             json.dump(index, f, indent=2)
 
@@ -139,9 +139,21 @@ class FileProcessor:
         console.print(f"[bold blue]Issuers found:[/bold blue] {len(issuers)}")
         console.print(f"[bold blue]Recipients found:[/bold blue] {len(recipients)}")
 
+    def archive_all_files(self, archive_to: str):
+        for filename in os.listdir(self.inbox_path):
+            if filename != self.index_file and os.path.isfile(os.path.join(self.inbox_path, filename)):
+                year = filename.split('-')[-1][:4]
+                year_folder = os.path.join(archive_to, year)
+                os.makedirs(year_folder, exist_ok=True)
+                old_path = os.path.join(self.inbox_path, filename)
+                new_path = os.path.join(year_folder, filename)
+                os.rename(old_path, new_path)
+                console.print(f"[bold green]Archived file:[/bold green] [magenta][u]{filename}[/u][/magenta] to [magenta]{year_folder}[/magenta]")
+
 def main(
     inbox_path: str = typer.Argument(..., help="Path to the inbox folder"),
-    build_index_from: str = typer.Option(None, help="Build index from the specified folder")
+    build_index_from: str = typer.Option(None, help="Build index from the specified folder"),
+    archive_to: str = typer.Option(None, help="Archive files to the specified folder")
 ):
     inbox_path = os.path.abspath(inbox_path)
 
@@ -150,7 +162,7 @@ def main(
         if not os.path.exists(build_index_from):
             typer.echo(f"Error: The specified folder does not exist: {build_index_from}")
             raise typer.Exit(code=1)
-        FileProcessor.build_index_from_folder(build_index_from, inbox_path)  # Pass inbox_path
+        FileProcessor.build_index_from_folder(build_index_from, inbox_path)
         return
 
     if not os.path.exists(inbox_path):
@@ -163,7 +175,9 @@ def main(
     process_valid_files = typer.confirm("Do you want to process valid files?")
     file_processor.process_files(process_valid_files)
 
-    # Save options at the end of processing
+    if archive_to and typer.confirm("Do you want to archive all files?"):
+        file_processor.archive_all_files(archive_to)
+
     file_processor.save_options()
 
 if __name__ == "__main__":
