@@ -114,13 +114,12 @@ class FileProcessor:
         console.print(table)
 
     @staticmethod
-    def build_index_from_folder(folder_path: str):
+    def build_index_from_folder(folder_path: str, inbox_path: str):
         issuers = set()
         recipients = set()
 
-        for dirpath, _, filenames in os.walk(folder_path, topdown=True):
+        for dirpath, _, filenames in os.walk(folder_path):
             for filename in filenames:
-                print(filename)
                 if validate_file_name(filename):
                     parts = filename.split('-')
                     if len(parts) >= 3:
@@ -132,7 +131,7 @@ class FileProcessor:
             'recipients': sorted(list(recipients))
         }
 
-        index_path = os.path.join(folder_path, ".triage-index.json")
+        index_path = os.path.join(inbox_path, ".triage-index.json")  # Save in inbox folder
         with open(index_path, 'w') as f:
             json.dump(index, f, indent=2)
 
@@ -144,16 +143,16 @@ def main(
     inbox_path: str = typer.Argument(..., help="Path to the inbox folder"),
     build_index_from: str = typer.Option(None, help="Build index from the specified folder")
 ):
+    inbox_path = os.path.abspath(inbox_path)
+
     if build_index_from:
         build_index_from = os.path.abspath(build_index_from)
         if not os.path.exists(build_index_from):
             typer.echo(f"Error: The specified folder does not exist: {build_index_from}")
             raise typer.Exit(code=1)
-        FileProcessor.build_index_from_folder(build_index_from)
+        FileProcessor.build_index_from_folder(build_index_from, inbox_path)  # Pass inbox_path
         return
 
-    inbox_path = os.path.abspath(inbox_path)
-    
     if not os.path.exists(inbox_path):
         typer.echo(f"Error: The specified inbox folder does not exist: {inbox_path}")
         raise typer.Exit(code=1)
