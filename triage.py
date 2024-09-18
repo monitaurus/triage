@@ -118,12 +118,14 @@ class FileProcessor:
         issuers = set()
         recipients = set()
 
-        for filename in os.listdir(folder_path):
-            if validate_file_name(filename):
-                parts = filename.split('-')
-                if len(parts) >= 3:
-                    issuers.add(parts[1])
-                    recipients.add(parts[2])
+        for dirpath, _, filenames in os.walk(folder_path, topdown=True):
+            for filename in filenames:
+                print(filename)
+                if validate_file_name(filename):
+                    parts = filename.split('-')
+                    if len(parts) >= 3:
+                        issuers.add(parts[1])
+                        recipients.add(parts[2])
 
         index = {
             'issuers': sorted(list(issuers)),
