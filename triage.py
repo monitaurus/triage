@@ -66,6 +66,10 @@ class FileProcessor:
     def _process_single_file(self, filename: str, archive_to: str = None):
         console.print(f"[bold red]Processing file:[/bold red] [magenta][u]{filename}[/u][/magenta]")
         
+        if not typer.confirm("Do you want to rename this file?", default=True):
+            console.print(f"[bold yellow]Skipping file:[/bold yellow] [magenta][u]{filename}[/u][/magenta]\n")
+            return
+        
         metadata = self._get_file_metadata()
         new_name = self._generate_new_filename(filename, metadata)
         
