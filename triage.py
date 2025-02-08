@@ -24,10 +24,11 @@ def clean_string(s: str) -> str:
     s = re.sub(r'\s+', ' ', s.strip())
     return s.replace(' ', '_')
 
-def get_user_input(prompt_text: str, options: List[str] = None, allow_empty: bool = False) -> str:
+def get_user_input(prompt_text: str, options: List[str] = None, allow_empty: bool = False, default: str = None) -> str:
     completer = FuzzyWordCompleter(options) if options else None
     while True:
-        user_input = prompt(prompt_text + ": ", completer=completer).strip()
+        default_str = "" if default is None else default
+        user_input = prompt(prompt_text + ": ", completer=completer, default=default_str).strip()
         cleaned_input = clean_string(user_input)
         if cleaned_input or allow_empty:
             return cleaned_input
@@ -70,7 +71,16 @@ class FileProcessor:
             console.print(f"[bold yellow]Skipping file:[/bold yellow] [magenta][u]{filename}[/u][/magenta]\n")
             return
         
-        metadata = self._get_file_metadata()
+        # Pre-fill values if file has valid format
+        default_values = None
+        if validate_file_name(filename):
+            match = re.match(FILE_NAME_PATTERN, filename)
+            if match:
+                title, issuer, recipient, date_str = match.groups()[:4]
+                year, month, day = map(int, date_str.split('_'))
+                default_values = (title, issuer, recipient, f"{year:04d}_{month:02d}_{day:02d}")
+        
+        metadata = self._get_file_metadata(default_values)
         new_name = self._generate_new_filename(filename, metadata)
         
         old_path = os.path.join(self.inbox_path, filename)
@@ -78,26 +88,34 @@ class FileProcessor:
         os.rename(old_path, new_path)
         console.print(f"[bold green]File renamed to:[/bold green] [magenta][u]{new_name}[/u][/magenta]\n")
 
-    def _get_file_metadata(self) -> Tuple[str, str, str, str]:
-        title = get_user_input("Enter title")
-        issuer = self._get_and_update_option("issuer")
-        recipient = self._get_and_update_option("recipient")
-        date_input = self._get_date_input()
+    def _get_file_metadata(self, default_values: Tuple[str, str, str, str] = None) -> Tuple[str, str, str, str]:
+        today = date.today()
+        year, month, day = today.year, today.month, today.day
+        
+        if default_values:
+            title, issuer, recipient, date_str = default_values
+            year, month, day = map(int, date_str.split('_'))
+        else:
+            title = issuer = recipient = None
+
+        title = get_user_input("Enter title", default=title)
+        issuer = self._get_and_update_option("issuer", default=issuer)
+        recipient = self._get_and_update_option("recipient", default=recipient)
+        date_input = self._get_date_input(year=year, month=month, day=day)
         
         self.save_options()
         return title, issuer, recipient, date_input
 
-    def _get_and_update_option(self, option_type: str) -> str:
-        value = get_user_input(f"Enter {option_type}", self.options[f"{option_type}s"])
+    def _get_and_update_option(self, option_type: str, default: str = None) -> str:
+        value = get_user_input(f"Enter {option_type}", self.options[f"{option_type}s"], default=default)
         if value not in self.options[f"{option_type}s"]:
             self.options[f"{option_type}s"].append(value)
         return value
 
-    def _get_date_input(self) -> str:
-        today = date.today()
-        year = get_date_input("Enter year", today.year)
-        month = get_date_input("Enter month", today.month)
-        day = get_date_input("Enter day", today.day)
+    def _get_date_input(self, year: int, month: int, day: int) -> str:
+        year = get_date_input("Enter year", year)
+        month = get_date_input("Enter month", month)
+        day = get_date_input("Enter day", day)
         return f"{year:04d}_{month:02d}_{day:02d}"
 
     def _generate_new_filename(self, original_filename: str, metadata: Tuple[str, str, str, str]) -> str:
