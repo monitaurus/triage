@@ -20,6 +20,7 @@ dist/
 # Test artifacts
 .pytest_cache/
 .coverage
+sample_files/
 
 # OS-specific
 .DS_Store
