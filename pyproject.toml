@@ -3,7 +3,7 @@ name = "triage"
 version = "0.1.0"
 description = "Triage a personal inbox of documents."
 authors = [{ name = "Benjamin Rothan" }]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "click==8.3.0",
     "markdown-it-py==4.0.0",
@@ -16,6 +16,12 @@ dependencies = [
     "typing-extensions==4.15.0",
     "wcwidth==0.2.14",
 ]
+
+[project.scripts]
+triage = "triage.cli:app"
+
+[project.optional-dependencies]
+dev = ["pytest"]
 
 [build-system]
 requires = ["hatchling"]
