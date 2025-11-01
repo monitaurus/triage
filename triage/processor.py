@@ -5,6 +5,9 @@ from typing import Tuple
 
 import typer
 from rich.console import Console
+import pytesseract
+import fitz # PyMuPDF
+from PIL import Image
 
 from .config import FILE_NAME_PATTERN
 from .file_handler import FileHandler
@@ -27,6 +30,10 @@ class FileProcessor:
     def _process_single_file(self, filename: str):
         console.print(f"[bold red]Processing file:[/bold red] [magenta][u]{filename}[/u][/magenta]")
 
+        file_path = os.path.join(self.inbox_path, filename)
+        extracted_text = self._extract_text_from_file(file_path)
+        console.print(f"[dim]Extracted text (first 200 chars): {extracted_text[:200]}...[/dim]")
+
         if not typer.confirm("Do you want to rename this file?", default=True):
             console.print(f"[bold yellow]Skipping file:[/bold yellow] [magenta][u]{filename}[/u][/magenta]\n")
             return
@@ -43,6 +50,36 @@ class FileProcessor:
         new_name = self._generate_new_filename(filename, metadata)
 
         self.file_handler.rename_file(filename, new_name)
+
+    def _extract_text_from_file(self, file_path: str) -> str:
+        text = ""
+        file_extension = os.path.splitext(file_path)[1].lower()
+
+        if file_extension == ".pdf":
+            try:
+                doc = fitz.open(file_path)
+                for page_num in range(doc.page_count):
+                    page = doc.load_page(page_num)
+                    page_text = page.get_text()
+                    if page_text.strip(): # If direct text extraction yields content
+                        text += page_text
+                    else: # Fallback to OCR for image-based PDFs
+                        pix = page.get_pixmap()
+                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        text += pytesseract.image_to_string(img)
+                doc.close()
+            except Exception as e:
+                console.print(f"[bold red]Error processing PDF with PyMuPDF/Tesseract:[/bold red] {e}")
+        elif file_extension in [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"]:
+            try:
+                img = Image.open(file_path)
+                text = pytesseract.image_to_string(img)
+            except Exception as e:
+                console.print(f"[bold red]Error processing image with Tesseract:[/bold red] {e}")
+        else:
+            console.print(f"[bold yellow]Warning:[/bold yellow] Unsupported file type for text extraction: {file_extension}")
+
+        return text.strip()
 
     def _get_file_metadata(self, default_values: Tuple[str, str, str, str] = None) -> Tuple[str, str, str, str]:
         today = date.today()
