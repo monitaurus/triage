@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from datetime import date
 from typing import Tuple
 
@@ -9,7 +10,10 @@ import pytesseract
 import fitz # PyMuPDF
 from PIL import Image
 
-from .config import FILE_NAME_PATTERN
+from langchain_community.llms import Ollama
+from langchain_core.prompts import PromptTemplate
+
+from .config import FILE_NAME_PATTERN, LLM_MODEL_NAME, OLLAMA_BASE_URL
 from .file_handler import FileHandler
 from .indexer import Indexer
 from .utils import get_user_input, get_date_input, validate_file_name
@@ -17,10 +21,27 @@ from .utils import get_user_input, get_date_input, validate_file_name
 console = Console()
 
 class FileProcessor:
-    def __init__(self, inbox_path: str, file_handler: FileHandler, indexer: Indexer):
+    def __init__(self, inbox_path: str, file_handler: FileHandler, indexer: Indexer, debug: bool = False):
         self.inbox_path = inbox_path
         self.file_handler = file_handler
         self.indexer = indexer
+        self.debug = debug
+        self.llm = Ollama(model=LLM_MODEL_NAME, base_url=OLLAMA_BASE_URL)
+        self.prompt_template = PromptTemplate.from_template(
+            """
+            You are an AI assistant that extracts metadata from documents. Given the following text from a document, 
+            identify the title, issuer, recipient, and date. Prioritize matching issuer and recipient to the provided lists 
+            if possible. If not, suggest a new, clean value. The date should be in YYYY_MM_DD format. 
+            Return the output as a JSON object with keys 'title', 'issuer', 'recipient', 'date'.
+
+            Existing Issuers: {issuers}
+            Existing Recipients: {recipients}
+
+            Document Text: {text}
+
+            JSON Output:
+            """
+        )
 
     def process_files(self, process_valid_files: bool):
         for filename in self.file_handler.get_files():
@@ -46,7 +67,7 @@ class FileProcessor:
                 year, month, day = map(int, date_str.split('_'))
                 default_values = (title, issuer, recipient, f"{year:04d}_{month:02d}_{day:02d}")
 
-        metadata = self._get_file_metadata(default_values)
+        metadata = self._get_file_metadata(default_values, extracted_text)
         new_name = self._generate_new_filename(filename, metadata)
 
         self.file_handler.rename_file(filename, new_name)
@@ -81,7 +102,33 @@ class FileProcessor:
 
         return text.strip()
 
-    def _get_file_metadata(self, default_values: Tuple[str, str, str, str] = None) -> Tuple[str, str, str, str]:
+    def _get_llm_suggestions(self, text: str) -> dict:
+        console.print("[dim]Querying LLM for metadata suggestions...[/dim]")
+        try:
+            prompt = self.prompt_template.format(
+                issuers=", ".join(self.indexer.options["issuers"]),
+                recipients=", ".join(self.indexer.options["recipients"]),
+                text=text
+            )
+            if self.debug:
+                console.print(f"[dim]LLM Prompt:[/dim]\n[dim]{prompt}[/dim]")
+            llm_response = self.llm.invoke(prompt)
+            if self.debug:
+                console.print(f"[dim]LLM Response:[/dim]\n[dim]{llm_response}[/dim]")
+
+            # Extract JSON from the response
+            match = re.search(r"```json\n(.*?)\n```", llm_response, re.DOTALL)
+            if match:
+                json_str = match.group(1)
+            else:
+                json_str = llm_response
+
+            return json.loads(json_str)
+        except Exception as e:
+            console.print(f"[bold red]Error querying LLM or parsing response:[/bold red] {e}")
+            return {}
+
+    def _get_file_metadata(self, default_values: Tuple[str, str, str, str] = None, extracted_text: str = "") -> Tuple[str, str, str, str]:
         today = date.today()
         year, month, day = today.year, today.month, today.day
 
@@ -90,6 +137,17 @@ class FileProcessor:
             year, month, day = map(int, date_str.split('_'))
         else:
             title = issuer = recipient = None
+            if extracted_text:
+                llm_metadata = self._get_llm_suggestions(extracted_text)
+                title = llm_metadata.get("title")
+                issuer = llm_metadata.get("issuer")
+                recipient = llm_metadata.get("recipient")
+                date_str = llm_metadata.get("date")
+                if date_str:
+                    try:
+                        year, month, day = map(int, re.split(r'[-_]', date_str))
+                    except ValueError:
+                        console.print(f"[bold yellow]Warning:[/bold yellow] LLM suggested invalid date format: {date_str}")
 
         title = get_user_input("Enter title", default=title)
         issuer = self._get_and_update_option("issuer", default=issuer)

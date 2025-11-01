@@ -18,6 +18,8 @@ dependencies = [
     "pytesseract",
     "PyMuPDF",
     "Pillow",
+    "langchain",
+    "langchain-community",
 ]
 
 [project.scripts]

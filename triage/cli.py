@@ -11,7 +11,8 @@ app = typer.Typer()
 def main(
     inbox_path: str = typer.Argument(..., help="Path to the inbox folder"),
     build_index_from: str = typer.Option(None, help="Build index from the specified folder"),
-    archive_to: str = typer.Option(None, help="Archive files to the specified folder")
+    archive_to: str = typer.Option(None, help="Archive files to the specified folder"),
+    debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug output.")
 ):
     inbox_path = os.path.abspath(inbox_path)
 
@@ -30,7 +31,7 @@ def main(
         return
 
     file_handler = FileHandler(inbox_path)
-    file_processor = FileProcessor(inbox_path, file_handler, indexer)
+    file_processor = FileProcessor(inbox_path, file_handler, indexer, debug=debug)
 
     file_handler.list_files()
 
