@@ -16,3 +16,13 @@ def test_validate_file_name():
     assert validate_file_name("title-issuer-recipient.pdf") == False
     assert validate_file_name("title-issuer-2023_01_01.pdf") == False
     assert validate_file_name("title--recipient-2023_01_01.pdf") == False
+
+from unittest.mock import patch
+from triage.utils import get_user_input
+
+@patch('triage.utils.prompt', side_effect=["  ", "valid_input"])
+def test_get_user_input_invalid_then_valid(mock_prompt):
+    result = get_user_input("Enter value")
+    assert result == "valid_input"
+    assert mock_prompt.call_count == 2
+

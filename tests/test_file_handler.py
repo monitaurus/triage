@@ -41,3 +41,17 @@ def test_archive_file(tmp_path: Path):
 
     assert (archive / "2023" / test_file).exists()
     assert not (inbox / test_file).exists()
+
+def test_list_files_output(tmp_path: Path, capsys):
+    inbox = tmp_path / "inbox"
+    inbox.mkdir()
+    (inbox / "file1.txt").touch()
+    (inbox / "file2.pdf").touch()
+
+    handler = FileHandler(str(inbox))
+    handler.list_files()
+
+    captured = capsys.readouterr()
+    assert "file1.txt" in captured.out
+    assert "file2.pdf" in captured.out
+

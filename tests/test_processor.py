@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock, ANY
 import pytest
+from pathlib import Path
 from triage.processor import FileProcessor
 from triage.file_handler import FileHandler
 from triage.indexer import Indexer
@@ -100,4 +101,31 @@ def test_get_file_metadata_with_llm_suggestions(mock_typer_prompt, mock_prompt, 
     assert title == "llm_title"
     assert issuer == "llm_issuer"
     assert recipient == "llm_recipient"
+    assert date_input == "2024_01_15"
+
+@patch("typer.confirm", return_value=False)
+def test_process_single_file_skip(mock_confirm, processor_with_mock_ollama, capsys):
+    processor, _ = processor_with_mock_ollama
+    inbox_path = Path(processor.inbox_path)
+    (inbox_path / "test_skip.txt").touch()
+
+    processor.process_files(process_valid_files=False)
+
+    captured = capsys.readouterr()
+    assert "Skipping file" in captured.out
+
+@patch("triage.utils.prompt")
+@patch("triage.utils.typer.prompt")
+def test_get_file_metadata_llm_invalid_json(mock_typer_prompt, mock_prompt, processor_with_mock_ollama):
+    processor, mock_ollama = processor_with_mock_ollama
+    mock_ollama.return_value.invoke.return_value = "this is not json"
+
+    mock_prompt.side_effect = ["user_title", "user_issuer", "user_recipient"]
+    mock_typer_prompt.side_effect = ["2024", "1", "15"]
+
+    title, issuer, recipient, date_input = processor._get_file_metadata(default_values=None, extracted_text="some text")
+
+    assert title == "user_title"
+    assert issuer == "user_issuer"
+    assert recipient == "user_recipient"
     assert date_input == "2024_01_15"
