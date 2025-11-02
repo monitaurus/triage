@@ -12,7 +12,6 @@ As a user with a mix of scanned paper documents and digital files (e.g., from em
 
 ### 3.1. Inbox Monitoring
 - The script will monitor a configurable "inbox" for new files.
-- Any file added to this folder will trigger the processing workflow.
 
 ### 3.2. Multi-format Text Extraction
 - The system must handle two primary document types:
