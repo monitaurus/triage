@@ -1,13 +1,9 @@
 import os
 import json
-from typing import List, Dict
-
-from rich.console import Console
+from typing import List, Dict, Set
 
 from .config import INDEX_FILE_NAME
 from .utils import validate_file_name
-
-console = Console()
 
 class Indexer:
     def __init__(self, inbox_path: str):
@@ -25,7 +21,7 @@ class Indexer:
         with open(self.index_path, 'w') as f:
             json.dump(self.options, f, indent=2)
 
-    def build_index_from_folder(self, folder_path: str):
+    def build_index_from_folder(self, folder_path: str) -> (Set[str], Set[str]):
         issuers = set()
         recipients = set()
 
@@ -44,7 +40,5 @@ class Indexer:
 
         with open(self.index_path, 'w') as f:
             json.dump(index, f, indent=2)
-
-        console.print(f"[bold green]Index file created at:[/bold green] [magenta]{self.index_path}[/magenta]")
-        console.print(f"[bold blue]Issuers found:[/bold blue] {len(issuers)}")
-        console.print(f"[bold blue]Recipients found:[/bold blue] {len(recipients)}")
+        
+        return issuers, recipients
