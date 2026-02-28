@@ -1,27 +1,14 @@
-# Virtual Environment
-.venv/
-venv/
+# Go build output
+/triage
+/triage_bin
+*.exe
 
 # IDEs and editors
 .idea/
 .vscode/
 
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Build and distribution
-build/
-dist/
-*.egg-info/
-
-# Test artifacts
-.pytest_cache/
-.coverage
-sample_files/
-
 # OS-specific
 .DS_Store
 
+# Ignore sample testing directory
+sample_files/

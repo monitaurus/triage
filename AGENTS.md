@@ -1,21 +1,17 @@
 # Agents Contributing Guide
 
-## Commands
+Follow these rules:
 
-* Dependencies are managed with `uv` and defined in `pyproject.toml`. Any new dependencies should be added there.
+## Versioning & Commits
+* Format commit messages using the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
 
-## Versioning
+## Code Generation & Tooling
+* Use Context7 for code generation, setup, configuration, or API documentation. 
+* Trigger Context7 MCP tools automatically to resolve library IDs and retrieve documentation.
 
-* Use git as versioning.
-* Commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
-
-## Code
-
-* New code should follow the existing style (f-strings, type hints, `rich` for output).
-* Always use context7 when I need code generation, setup or configuration steps, or
-library/API documentation. This means you should automatically use the Context7 MCP
-tools to resolve library id and get library docs without me having to explicitly ask.
-
-## Others
-
-* product requirements could be found in file `docs/PRD.md`
+## Project Architecture
+* **Agent-First CLI**: Build tools for automation. 
+* **No UIs**: Exclude Terminal UIs, interactive prompts, and standard logging. 
+* **Use JSON**: Rely on argument-based subcommands and `--json` outputs.
+* **Pure Go**: Avoid CGO bindings. 
+* **Cross-Compile**: Maintain cross-compilation support.
