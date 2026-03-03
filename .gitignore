@@ -12,3 +12,5 @@
 
 # Ignore sample testing directory
 sample_files/
+# Added by goreleaser init:
+dist/
