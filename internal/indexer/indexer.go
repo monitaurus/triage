@@ -3,6 +3,7 @@ package indexer
 import (
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/monitaurus/triage/internal/naming"
 )
@@ -41,11 +42,13 @@ func BuildIndex(dirPath string) (IndexData, error) {
 	for i := range issuersMap {
 		issuers = append(issuers, i)
 	}
+	sort.Strings(issuers)
 
 	var recipients []string
 	for r := range recipientsMap {
 		recipients = append(recipients, r)
 	}
+	sort.Strings(recipients)
 
 	return IndexData{
 		Issuers:    issuers,

@@ -8,7 +8,8 @@ import (
 
 // RenameFile atomically renames a file within the same directory.
 func RenameFile(dirPath, oldFilename, newFilename string) error {
-	oldPath := filepath.Join(dirPath, oldFilename)
+	safeOldFilename := filepath.Base(oldFilename)
+	oldPath := filepath.Join(dirPath, safeOldFilename)
 	newPath := filepath.Join(dirPath, newFilename)
 
 	if _, err := os.Stat(oldPath); os.IsNotExist(err) {

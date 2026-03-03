@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +23,23 @@ documents within an inbox directory in a structured and deterministic way.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
-	return rootCmd.Execute()
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
+
+	err := rootCmd.Execute()
+	if err != nil {
+		if jsonOutput {
+			// Print error as JSON
+			result := map[string]string{
+				"status": "failed",
+				"error":  err.Error(),
+			}
+			data, _ := json.MarshalIndent(result, "", "  ")
+			fmt.Println(string(data))
+		}
+		return err
+	}
+	return nil
 }
 
 func init() {
