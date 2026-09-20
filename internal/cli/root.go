@@ -2,10 +2,35 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
+
+// ExitFallback is the exit code meaning "nothing usable here, the caller should
+// fall back to another method" (e.g. read the file visually).
+const ExitFallback = 2
+
+// ExitError is an error carrying a stable machine-readable code and process exit code.
+type ExitError struct {
+	ExitCode int
+	Code     string
+	Message  string
+	Fallback string
+}
+
+func (e *ExitError) Error() string { return e.Message }
+
+// ExitCodeOf returns the process exit code for an error returned by Execute.
+func ExitCodeOf(err error) int {
+	var ee *ExitError
+	if errors.As(err, &ee) && ee.ExitCode != 0 {
+		return ee.ExitCode
+	}
+	return 1
+}
 
 var (
 	// Root flag for JSON output
@@ -34,8 +59,17 @@ func Execute() error {
 				"status": "failed",
 				"error":  err.Error(),
 			}
+			var ee *ExitError
+			if errors.As(err, &ee) {
+				result["code"] = ee.Code
+				if ee.Fallback != "" {
+					result["fallback"] = ee.Fallback
+				}
+			}
 			data, _ := json.MarshalIndent(result, "", "  ")
 			fmt.Println(string(data))
+		} else {
+			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 		return err
 	}
