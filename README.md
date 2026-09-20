@@ -72,3 +72,13 @@ Scans an existing archive directory to compile a deduplicated list of unique iss
 ```bash
 ./triage index /path/to/archive [--json]
 ```
+
+### 5. Extract Text
+Returns the embedded text of a PDF so an agent can identify the document without opening it visually. No OCR and no LLM is involved. If the document has no usable text (scan, image, garbled text layer), the command fails with exit code `2` and `"fallback": "vision"`, meaning the caller should read the file visually itself. Other failures exit with code `1`.
+
+```bash
+./triage text-extract /path/to/file.pdf [--json] [--max-chars 3000] [--min-chars 50] [--pages 0]
+
+# Branch on the exit code
+./triage text-extract scan.pdf --json || echo "read it visually"
+```
